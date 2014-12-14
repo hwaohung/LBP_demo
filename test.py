@@ -6,16 +6,11 @@ import time
 
 def flip_count(num):
     bits = "{0:08b}".format(num)
-    flips = [(bits[i]!=bits[i+1]) for i in range(7)]
-    return sum(flips)
+    flips = 0
+    for i in range(7):
+        flips += (bits[i] is not bits[i+1])
 
-# Input the code entry list(MSB->LSB)
-def calc_value(code):
-    value = 0
-    for i in range(len(code)):
-        value = (value<<1) + code[i]
-
-    return value
+    return flips
 
 # Input: Gray image
 def gen_LBP(image):
@@ -35,14 +30,30 @@ def gen_LBP(image):
 
     return LBP, hist
 
+# Input the code entry list(MSB->LSB)
+def calc_value(code):
+    value = 0
+    for i in range(len(code)):
+        value = (value<<1) + code[i]
+
+    return value
+
 def gen_uniform_values(code):
     # Find uncertain bits's power flag
-    flags = [len(code)-1-i for i in range(len(code)) if (code[i]) == -1]
+    flags = list()
+    # Code's min value
+    base = 0 
+
+    bit_len = len(code)
+    for i in range(bit_len):
+        base <<= 1
+        if code[i] == -1:
+            flags.append(bit_len-1-i)
+        else:
+            base += code[i]
+
     # Amount of uncertain bits permutation
     amount = 2 ** len(flags)
-
-    # Code's min value
-    base = sum([2**(len(code)-1-i) for i in range(len(code)) if (code[i]) == 1])
 
     uniform_values = list()
     bit_format = "{0:0" + str(len(flags)) + "b}"
@@ -50,7 +61,8 @@ def gen_uniform_values(code):
         candidate = base
         bits = bit_format.format(i)
         for j in range(len(flags)):
-            candidate += int(bits[j]) * (2**flags[j])
+            if bits[j] is "1":
+                candidate += (2**flags[j])
 
         if flip_count(candidate) <= 2:
             uniform_values.append(candidate)
@@ -62,7 +74,6 @@ def gen_NRLBP(image, threshold):
     offsets = [(-1,-1), (0,-1), (1,-1), (1,0), (1,1), (0,1), (-1,-1), (-1,0)]
     hist = [0 for i in range(59)]
     for x in range(1, h-1):
-        print x
         for y in range(1, w-1):
             code = list()
             for i, j in offsets:
@@ -76,32 +87,24 @@ def gen_NRLBP(image, threshold):
                     code.append(-1)
             
             if code.count(-1) != 0:
-                candidates = gen_uniform_values(code)
-                for candidate in candidates:
-                    slot = LBP_mapper[candidate]
-                    hist[slot] += 1.0/len(candidates)
+                values = gen_uniform_values(code)
+                if len(values) == 0:
+                    hist[len(hist)-1] += 1
+                else:
+                    for value in values:
+                        slot = LBP_mapper[value]
+                        hist[slot] += 1.0/len(values)
             else:
                 slot = LBP_mapper[calc_value(code)]
                 hist[slot] += 1
-    
+
     return hist
 
-def gen_histogram_entries(image):
-    h, w = image.shape
-    entries = list()
-    for x in range(h):
-        for y in range(w):
-            entries.append(LBP_mapper[image[x, y]])
-    return entries
-
-def draw_histogram(X, Y):
+def draw_histogram(X, Y, filename):
     plt.bar(X, Y, width=0.9, linewidth=1)
-    plt.show()
-
-def show_histogram(values):
-    bins = range(min(values), max(values)+1)
-    pylab.hist(values, bins, align="mid")
-    pylab.show()
+    plt.savefig(filename)
+    plt.clf()
+    #plt.show()
 
 
 if __name__ == "__main__":
@@ -117,14 +120,16 @@ if __name__ == "__main__":
         else:
             LBP_mapper[i] = 58
 
-    filename = "lena.bmp"
+    filename = "lena.jpg"
     image = cv2.imread(filename)
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
   
     t = time.time() 
-    #result_image, hist = gen_LBP(gray_image)
-    hist = gen_NRLBP(gray_image, 5)
-    draw_histogram(range(0, 59), hist)
-    #entries = gen_histogram_entries(LBP_image)
-    #show_histogram(entries)
+    result_image, hist = gen_LBP(gray_image)
+    draw_histogram(range(0, 59), hist, "LBP_hist.png")
+    print sum(hist), hist[len(hist)-1]
+
+    hist = gen_NRLBP(gray_image, 2)
+    draw_histogram(range(0, 59), hist, "NRLBP_hist.png")
+    print sum(hist), hist[len(hist)-1]
     print "Cost: {0}".format(time.time()-t)
