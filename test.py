@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import pylab
+from matplotlib import pyplot as plt
 import time
 
 def flip_count(num):
@@ -11,7 +12,7 @@ def flip_count(num):
 # Input the code entry list(MSB->LSB)
 def calc_value(code):
     value = 0
-    for i in range(code):
+    for i in range(len(code)):
         value = (value<<1) + code[i]
 
     return value
@@ -20,6 +21,7 @@ def calc_value(code):
 def gen_LBP(image):
     h, w = image.shape
     LBP = np.zeros((h-2, w-2), np.uint8)
+    hist = [0 for i in range(59)]
     offsets = [(-1,-1), (0,-1), (1,-1), (1,0), (1,1), (0,1), (-1,-1), (-1,0)] 
     for x in range(1, h-1):
         for y in range(1, w-1):
@@ -29,9 +31,11 @@ def gen_LBP(image):
                 value += int(int(image[x+i, y+j])-int(image[x, y]) >= 0)
 
             LBP[x-1, y-1] = value
-    return LBP
+            hist[LBP_mapper[value]] += 1
 
-def gen_uniform_codes(code):
+    return LBP, hist
+
+def gen_uniform_values(code):
     # Find uncertain bits's power flag
     flags = [len(code)-1-i for i in range(len(code)) if (code[i]) == -1]
     # Amount of uncertain bits permutation
@@ -39,23 +43,26 @@ def gen_uniform_codes(code):
 
     # Code's min value
     base = sum([2**(len(code)-1-i) for i in range(len(code)) if (code[i]) == 1])
-    bit_format = "{0:0" + uncertain_bits + "b}"
+
+    uniform_values = list()
+    bit_format = "{0:0" + str(len(flags)) + "b}"
     for i in range(amount):
         candidate = base
         bits = bit_format.format(i)
         for j in range(len(flags)):
-            candidate += bits[i] * (2**flag[j])
+            candidate += int(bits[j]) * (2**flags[j])
 
         if flip_count(candidate) <= 2:
-            uniform_codes.append(candidate)
+            uniform_values.append(candidate)
 
-    return uniform_codes
+    return uniform_values
 
 def gen_NRLBP(image, threshold):
     h, w = image.shape
     offsets = [(-1,-1), (0,-1), (1,-1), (1,0), (1,1), (0,1), (-1,-1), (-1,0)]
     hist = [0 for i in range(59)]
     for x in range(1, h-1):
+        print x
         for y in range(1, w-1):
             code = list()
             for i, j in offsets:
@@ -69,11 +76,13 @@ def gen_NRLBP(image, threshold):
                     code.append(-1)
             
             if code.count(-1) != 0:
-                candidates = gen_uniform_codes(code)
+                candidates = gen_uniform_values(code)
                 for candidate in candidates:
-                    hist[calc_value(candidate)] += 1.0/len(candidates)
+                    slot = LBP_mapper[candidate]
+                    hist[slot] += 1.0/len(candidates)
             else:
-                hist[calc_value(code)] += 1
+                slot = LBP_mapper[calc_value(code)]
+                hist[slot] += 1
     
     return hist
 
@@ -84,6 +93,10 @@ def gen_histogram_entries(image):
         for y in range(w):
             entries.append(LBP_mapper[image[x, y]])
     return entries
+
+def draw_histogram(X, Y):
+    plt.bar(X, Y, width=0.9, linewidth=1)
+    plt.show()
 
 def show_histogram(values):
     bins = range(min(values), max(values)+1)
@@ -102,14 +115,16 @@ if __name__ == "__main__":
             bin_id += 1
         # Non-uniform
         else:
-            LBP_mapper[i] = 59
+            LBP_mapper[i] = 58
 
     filename = "lena.bmp"
     image = cv2.imread(filename)
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
   
     t = time.time() 
-    LBP_image = gen_LBP(gray_image)
-    entries = gen_histogram_entries(LBP_image)
-    show_histogram(entries)
+    #result_image, hist = gen_LBP(gray_image)
+    hist = gen_NRLBP(gray_image, 5)
+    draw_histogram(range(0, 59), hist)
+    #entries = gen_histogram_entries(LBP_image)
+    #show_histogram(entries)
     print "Cost: {0}".format(time.time()-t)
