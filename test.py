@@ -1,8 +1,11 @@
 import cv2
-import numpy as np
+import sys
 import pylab
-from matplotlib import pyplot as plt
 import time
+import numpy as np
+from matplotlib import pyplot as plt
+
+from gen_noise import noise_embed
 
 def flip_count(num):
     bits = "{0:08b}".format(num)
@@ -100,11 +103,17 @@ def gen_NRLBP(image, threshold):
 
     return hist
 
-def draw_histogram(X, Y, filename):
+def draw_histogram(X, Y, title, max_y=None):
     plt.bar(X, Y, width=0.9, linewidth=1)
-    plt.savefig(filename)
-    plt.clf()
-    #plt.show()
+    #plt.bar([60], 25000, width=0.9, linewidth=1)
+    if max_y is not None:
+        plt.axis([0, len(X), 0, max_y])
+
+    plt.title(title)
+    plt.xlabel("Bin")
+    plt.ylabel("Count")
+    #plt.savefig(title+".png")
+    #plt.clf()
 
 
 if __name__ == "__main__":
@@ -120,16 +129,25 @@ if __name__ == "__main__":
         else:
             LBP_mapper[i] = 58
 
-    filename = "lena.jpg"
-    image = cv2.imread(filename)
+    image = cv2.imread(sys.argv[1])
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-  
+    test_image = noise_embed(gray_image, 0, 30)
+ 
+    #plt.imshow(test_image) 
+    #plt.subplot(221)
+
     t = time.time() 
-    result_image, hist = gen_LBP(gray_image)
-    draw_histogram(range(0, 59), hist, "LBP_hist.png")
+    result_image, hist = gen_LBP(test_image)
+    max_value = max(hist)
+    plt.subplot(223)
+    draw_histogram(range(0, 59), hist, "LBP_hist", max_value)
     print sum(hist), hist[len(hist)-1]
 
-    hist = gen_NRLBP(gray_image, 2)
-    draw_histogram(range(0, 59), hist, "NRLBP_hist.png")
+    hist = gen_NRLBP(test_image, 10)
+    max_value = max(hist) if max(hist) > max_value else max_value
+    plt.subplot(224)
+    draw_histogram(range(0, 59), hist, "NRLBP_hist", max_value)
     print sum(hist), hist[len(hist)-1]
     print "Cost: {0}".format(time.time()-t)
+
+    plt.show()
