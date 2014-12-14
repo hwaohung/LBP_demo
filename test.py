@@ -8,7 +8,6 @@ def flip_count(num):
     flips = [(bits[i]!=bits[i+1]) for i in range(7)]
     return sum(flips)
 
-
 # Input: Gray image
 def gen_LBP(image):
     h, w = image.shape
@@ -23,7 +22,6 @@ def gen_LBP(image):
 
             LBP[x-1, y-1] = value
     return LBP
-
 
 def gen_histogram_entries(image):
     h, w = image.shape
