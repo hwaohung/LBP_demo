@@ -1,8 +1,8 @@
 import cv2
 import sys
-import pylab
 import time
 import numpy as np
+import matplotlib.cm as cm
 from matplotlib import pyplot as plt
 
 from gen_noise import noise_embed
@@ -112,9 +112,10 @@ def draw_histogram(X, Y, title, max_y=None):
     plt.title(title)
     plt.xlabel("Bin")
     plt.ylabel("Count")
-    #plt.savefig(title+".png")
-    #plt.clf()
 
+def draw_image(image, title):
+    plt.title(title)
+    plt.imshow(image, cmap = cm.Greys_r)
 
 if __name__ == "__main__":
     # LBP value => bin ID
@@ -130,24 +131,25 @@ if __name__ == "__main__":
             LBP_mapper[i] = 58
 
     image = cv2.imread(sys.argv[1])
-    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    test_image = noise_embed(gray_image, 0, 30)
  
-    #plt.imshow(test_image) 
-    #plt.subplot(221)
+    plt.subplot(221)
+    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    draw_image(gray_image, "Origin")
+
+    plt.subplot(222)
+    test_image = noise_embed(gray_image, 0, 30)
+    draw_image(test_image, "Embed noise")
 
     t = time.time() 
+    plt.subplot(223)
     result_image, hist = gen_LBP(test_image)
     max_value = max(hist)
-    plt.subplot(223)
-    draw_histogram(range(0, 59), hist, "LBP_hist", max_value)
-    print sum(hist), hist[len(hist)-1]
+    draw_histogram(range(len(hist)), hist, "LBP_hist", max_value)
 
+    plt.subplot(224)
     hist = gen_NRLBP(test_image, 10)
     max_value = max(hist) if max(hist) > max_value else max_value
-    plt.subplot(224)
-    draw_histogram(range(0, 59), hist, "NRLBP_hist", max_value)
-    print sum(hist), hist[len(hist)-1]
-    print "Cost: {0}".format(time.time()-t)
+    draw_histogram(range(len(hist)), hist, "NRLBP_hist", max_value)
 
+    print "Cost: {0}".format(time.time()-t)
     plt.show()
