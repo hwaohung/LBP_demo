@@ -67,7 +67,7 @@ def gen_uniform_values(code):
             if bits[j] is "1":
                 candidate += (2**flags[j])
 
-        if flip_count(candidate) <= 2:
+        if LBP_mapper[candidate] != 58:
             uniform_values.append(candidate)
 
     return uniform_values
