@@ -8,10 +8,14 @@ from matplotlib import pyplot as plt
 from gen_noise import noise_embed
 
 def flip_count(num):
-    bits = "{0:08b}".format(num)
     flips = 0
+    #bits = "{0:08b}".format(num)
+    #for i in range(7):
+    #    flips += (bits[i] is not bits[i+1])
     for i in range(7):
-        flips += (bits[i] is not bits[i+1])
+        pattern = num&3
+        flips += pattern is 1 or pattern is 2
+        num >>= 1
 
     return flips
 
