@@ -138,7 +138,7 @@ if __name__ == "__main__":
     draw_image(gray_image, "Origin")
 
     plt.subplot(222)
-    test_image = noise_embed(gray_image, 0, 30)
+    test_image = noise_embed(gray_image, 0, sys.argv[2])
     draw_image(test_image, "Embed noise")
 
     t = time.time() 
